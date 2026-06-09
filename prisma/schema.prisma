@@ -1,0 +1,64 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          Int          @id @default(autoincrement())
+  uuid        String       @unique @default(uuid())
+  pseudo      String       @unique
+  firstname   String?
+  lastname    String?
+  createdAt   DateTime     @default(now())
+  predictions Prediction[]
+}
+
+model Match {
+  id          Int          @id @default(autoincrement())
+  apiMatchId  String       @unique
+  homeTeam    String
+  awayTeam    String
+  homeFlag    String?
+  awayFlag    String?
+  kickoff     DateTime
+  status      MatchStatus  @default(SCHEDULED)
+  homeScore   Int?
+  awayScore   Int?
+  stage       String?
+  venue       String?
+  homeOdds    Float?
+  drawOdds    Float?
+  awayOdds    Float?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  predictions Prediction[]
+}
+
+model Prediction {
+  id                   Int      @id @default(autoincrement())
+  userId               Int
+  matchId              Int
+  predictedHomeScore   Int
+  predictedAwayScore   Int
+  pointsEarned         Int      @default(0)
+  bonusPoints          Int      @default(0)
+  isCalculated         Boolean  @default(false)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  user                 User     @relation(fields: [userId], references: [id])
+  match                Match    @relation(fields: [matchId], references: [id])
+
+  @@unique([userId, matchId])
+}
+
+enum MatchStatus {
+  SCHEDULED
+  LIVE
+  FINISHED
+  POSTPONED
+  CANCELLED
+}
