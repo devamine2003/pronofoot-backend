@@ -1,4 +1,4 @@
-import { PrismaClient, MatchStatus } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -35,7 +35,7 @@ async function main() {
       homeFlag: 'https://crests.football-data.org/773.svg',
       awayFlag: 'https://crests.football-data.org/1009.svg',
       kickoff: new Date('2026-06-15T18:00:00Z'),
-      status: MatchStatus.SCHEDULED,
+      status: 'SCHEDULED',
       stage: 'GROUP_STAGE',
       venue: 'SoFi Stadium, Los Angeles',
       homeOdds: 1.75,
@@ -54,7 +54,7 @@ async function main() {
       homeFlag: 'https://crests.football-data.org/764.svg',
       awayFlag: 'https://crests.football-data.org/760.svg',
       kickoff: new Date('2026-06-16T16:00:00Z'),
-      status: MatchStatus.SCHEDULED,
+      status: 'SCHEDULED',
       stage: 'GROUP_STAGE',
       venue: 'MetLife Stadium, New York',
       homeOdds: 2.1,
@@ -73,7 +73,7 @@ async function main() {
       homeFlag: 'https://crests.football-data.org/759.svg',
       awayFlag: 'https://crests.football-data.org/762.svg',
       kickoff: new Date('2026-06-14T19:00:00Z'),
-      status: MatchStatus.FINISHED,
+      status: 'FINISHED',
       homeScore: 1,
       awayScore: 3,
       stage: 'GROUP_STAGE',

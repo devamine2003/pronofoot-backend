@@ -6,7 +6,7 @@
 
 */
 -- AlterTable
-ALTER TABLE `user` ADD COLUMN `pseudo` VARCHAR(191) NOT NULL,
+ALTER TABLE `User` ADD COLUMN `pseudo` VARCHAR(191) NOT NULL,
     MODIFY `uuid` VARCHAR(191) NOT NULL,
     MODIFY `firstname` VARCHAR(191) NULL,
     MODIFY `lastname` VARCHAR(191) NULL;

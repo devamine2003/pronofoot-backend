@@ -10,10 +10,10 @@ datasource db {
 model User {
   id          Int          @id @default(autoincrement())
   uuid        String       @unique @default(uuid())
-  pseudo      String       @unique
   firstname   String?
   lastname    String?
   createdAt   DateTime     @default(now())
+  pseudo      String       @unique
   predictions Prediction[]
 }
 
@@ -39,20 +39,21 @@ model Match {
 }
 
 model Prediction {
-  id                   Int      @id @default(autoincrement())
-  userId               Int
-  matchId              Int
-  predictedHomeScore   Int
-  predictedAwayScore   Int
-  pointsEarned         Int      @default(0)
-  bonusPoints          Int      @default(0)
-  isCalculated         Boolean  @default(false)
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
-  user                 User     @relation(fields: [userId], references: [id])
-  match                Match    @relation(fields: [matchId], references: [id])
+  id                 Int      @id @default(autoincrement())
+  userId             Int
+  matchId            Int
+  predictedHomeScore Int
+  predictedAwayScore Int
+  pointsEarned       Int      @default(0)
+  bonusPoints        Int      @default(0)
+  isCalculated       Boolean  @default(false)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  match              Match    @relation(fields: [matchId], references: [id])
+  user               User     @relation(fields: [userId], references: [id])
 
   @@unique([userId, matchId])
+  @@index([matchId], map: "Prediction_matchId_fkey")
 }
 
 enum MatchStatus {
