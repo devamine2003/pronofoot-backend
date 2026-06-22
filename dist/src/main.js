@@ -11,7 +11,7 @@ async function bootstrap() {
     app.enableCors({
         origin: [
             'http://localhost:3001',
-            'https://pronofoot.vercel.app',
+            'https://pronofoot-t2mc.netlify.app',
         ],
         credentials: true,
     });

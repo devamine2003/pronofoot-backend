@@ -93,18 +93,18 @@ let PredictionsService = PredictionsService_1 = class PredictionsService {
         const allPredictions = await this.prisma.prediction.findMany({
             include: { match: true },
         });
-        this.logger.log(`Total prédictions en base: ${allPredictions.length}`);
+        this.logger.log(`Total predictions en base: ${allPredictions.length}`);
         const toCalculate = allPredictions.filter((p) => {
-            const notCalculated = p.isCalculated === false || p.isCalculated === 0;
             const hasHomeScore = p.match.homeScore !== null && p.match.homeScore !== undefined;
             const hasAwayScore = p.match.awayScore !== null && p.match.awayScore !== undefined;
-            this.logger.debug(`Prédiction ${p.id} | isCalculated: ${p.isCalculated} | ` +
+            const isFinished = p.match.status === prisma_types_1.MatchStatus.FINISHED;
+            this.logger.debug(`Prediction ${p.id} | isCalculated: ${p.isCalculated} | ` +
                 `Match: ${p.match.homeTeam} vs ${p.match.awayTeam} | ` +
-                `Score: ${p.match.homeScore} - ${p.match.awayScore} | ` +
-                `notCalculated: ${notCalculated} | hasScores: ${hasHomeScore && hasAwayScore}`);
-            return notCalculated && hasHomeScore && hasAwayScore;
+                `Status: ${p.match.status} | Score: ${p.match.homeScore} - ${p.match.awayScore} | ` +
+                `canCalculate: ${isFinished && hasHomeScore && hasAwayScore}`);
+            return isFinished && hasHomeScore && hasAwayScore;
         });
-        this.logger.log(`Prédictions à calculer: ${toCalculate.length}`);
+        this.logger.log(`Predictions a verifier: ${toCalculate.length}`);
         let calculated = 0;
         for (const prediction of toCalculate) {
             const match = prediction.match;
@@ -122,6 +122,11 @@ let PredictionsService = PredictionsService_1 = class PredictionsService {
                 predictedAwayScore: Number(prediction.predictedAwayScore),
             };
             const result = this.calculator.calculate(predForCalc, matchForCalc);
+            const needsUpdate = prediction.isCalculated !== true ||
+                Number(prediction.pointsEarned) !== result.basePoints ||
+                Number(prediction.bonusPoints) !== result.bonusPoints;
+            if (!needsUpdate)
+                continue;
             await this.prisma.prediction.update({
                 where: { id: prediction.id },
                 data: {
@@ -130,12 +135,12 @@ let PredictionsService = PredictionsService_1 = class PredictionsService {
                     isCalculated: true,
                 },
             });
-            this.logger.log(`✓ ${match.homeTeam} ${matchForCalc.homeScore}-${matchForCalc.awayScore} ${match.awayTeam} | ` +
+            this.logger.log(`Updated ${match.homeTeam} ${matchForCalc.homeScore}-${matchForCalc.awayScore} ${match.awayTeam} | ` +
                 `Prono: ${predForCalc.predictedHomeScore}-${predForCalc.predictedAwayScore} | ` +
                 `Points: ${result.totalPoints} pts (${result.reason})`);
             calculated++;
         }
-        this.logger.log(`Calcul terminé: ${calculated} prédictions traitées`);
+        this.logger.log(`Calcul termine: ${calculated} predictions mises a jour`);
         return { calculated };
     }
 };

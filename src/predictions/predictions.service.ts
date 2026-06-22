@@ -92,41 +92,39 @@ export class PredictionsService {
   }
 
   /**
-   * Calcule les points pour toutes les prédictions non calculées.
-   * On récupère TOUT sans filtre Prisma complexe, puis on filtre en JS.
+   * Recalcule les points pour les pronostics des matchs termines.
+   * Le calcul est idempotent: les lignes deja correctes sont laissees intactes,
+   * les anciennes lignes calculees avec une mauvaise regle sont reparees.
    */
   async calculatePendingPoints(): Promise<{ calculated: number }> {
-    // Étape 1 : récupère TOUTES les prédictions avec leur match
     const allPredictions = await (this.prisma as any).prediction.findMany({
       include: { match: true },
     });
 
-    this.logger.log(`Total prédictions en base: ${allPredictions.length}`);
+    this.logger.log(`Total predictions en base: ${allPredictions.length}`);
 
-    // Étape 2 : filtre en JavaScript — non calculées ET match avec scores
     const toCalculate = allPredictions.filter((p: any) => {
-      const notCalculated = p.isCalculated === false || p.isCalculated === 0;
       const hasHomeScore = p.match.homeScore !== null && p.match.homeScore !== undefined;
       const hasAwayScore = p.match.awayScore !== null && p.match.awayScore !== undefined;
+      const isFinished = p.match.status === MatchStatus.FINISHED;
 
       this.logger.debug(
-        `Prédiction ${p.id} | isCalculated: ${p.isCalculated} | ` +
+        `Prediction ${p.id} | isCalculated: ${p.isCalculated} | ` +
         `Match: ${p.match.homeTeam} vs ${p.match.awayTeam} | ` +
-        `Score: ${p.match.homeScore} - ${p.match.awayScore} | ` +
-        `notCalculated: ${notCalculated} | hasScores: ${hasHomeScore && hasAwayScore}`
+        `Status: ${p.match.status} | Score: ${p.match.homeScore} - ${p.match.awayScore} | ` +
+        `canCalculate: ${isFinished && hasHomeScore && hasAwayScore}`,
       );
 
-      return notCalculated && hasHomeScore && hasAwayScore;
+      return isFinished && hasHomeScore && hasAwayScore;
     });
 
-    this.logger.log(`Prédictions à calculer: ${toCalculate.length}`);
+    this.logger.log(`Predictions a verifier: ${toCalculate.length}`);
 
     let calculated = 0;
 
     for (const prediction of toCalculate) {
       const match = prediction.match;
 
-      // Convertit explicitement en nombre pour éviter les problèmes de type
       const matchForCalc = {
         ...match,
         homeScore: Number(match.homeScore),
@@ -143,6 +141,12 @@ export class PredictionsService {
       };
 
       const result = this.calculator.calculate(predForCalc, matchForCalc);
+      const needsUpdate =
+        prediction.isCalculated !== true ||
+        Number(prediction.pointsEarned) !== result.basePoints ||
+        Number(prediction.bonusPoints) !== result.bonusPoints;
+
+      if (!needsUpdate) continue;
 
       await (this.prisma as any).prediction.update({
         where: { id: prediction.id },
@@ -154,15 +158,15 @@ export class PredictionsService {
       });
 
       this.logger.log(
-        `✓ ${match.homeTeam} ${matchForCalc.homeScore}-${matchForCalc.awayScore} ${match.awayTeam} | ` +
-        `Prono: ${predForCalc.predictedHomeScore}-${predForCalc.predictedAwayScore} | ` +
-        `Points: ${result.totalPoints} pts (${result.reason})`
+        `Updated ${match.homeTeam} ${matchForCalc.homeScore}-${matchForCalc.awayScore} ${match.awayTeam} | ` +
+          `Prono: ${predForCalc.predictedHomeScore}-${predForCalc.predictedAwayScore} | ` +
+          `Points: ${result.totalPoints} pts (${result.reason})`,
       );
 
       calculated++;
     }
 
-    this.logger.log(`Calcul terminé: ${calculated} prédictions traitées`);
+    this.logger.log(`Calcul termine: ${calculated} predictions mises a jour`);
     return { calculated };
   }
 }
